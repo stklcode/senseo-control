@@ -95,6 +95,15 @@
 #define BUTTON_THRESHOLD    100     // button threshold (ms)
 #define BUTTON_LONG_THR     1500    // button threshold for long time push (ms)
 
+#define RED                 0b00000001
+#define RED_BLINK           0b00000010
+#define GREEN               0b00000100
+#define GREEN_BLINK         0b00001000
+#define BLUE                0b00010000
+#define BLUE_BLINK          0b00100000
+#define ORANGE              0b00000101
+#define ORANGE_BLINK        0b00001010
+
                                       // prototypes:
 void init ();                         //  initialization
 void power_off ();                    //  power off to sleep mode
