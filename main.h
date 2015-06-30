@@ -15,6 +15,7 @@
 #define TIME_1_COFFEE         26
 #define TIME_2_COFFEE         52
 #define OPERATING_TEMPERATURE 125   // ADC threshold for water temperature
+#define COFFEE_WISH           0     // save coffee wish while heating up
 /*
  *******************
  */
@@ -103,6 +104,8 @@
 #define BLUE_BLINK          0b00100000
 #define ORANGE              0b00000101
 #define ORANGE_BLINK        0b00001010
+#define VIOLET              0b00010001
+#define VIOLET_BLINK        0b00100010
 
                                       // prototypes:
 void init ();                         //  initialization

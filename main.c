@@ -84,6 +84,9 @@ int main (void)
         if (make_coffee != 1)
           make_coffee = 3;                              // set coffee flag to 3 (1 coffee) else
       }
+      else if(COFFEE_WISH) {                            // Save coffee wish
+        make_coffee = 3;
+      }
     }
 
     else if (button_1_cup_counter < BUTTON_THRESHOLD
@@ -103,6 +106,9 @@ int main (void)
         }
         if (make_coffee != 2)
           make_coffee = 4;                              //	set coffee flag to 4 (2 coffee) else
+      }
+      else if(COFFEE_WISH) {                            // Save coffee wish
+        make_coffee = 4;
       }
     }
 
@@ -186,7 +192,10 @@ int main (void)
       else                                            // temperature too low:
       {
         clear_bit(TRIAC_BOILER_w, TRIAC_BOILER_pin);  //	boiler on
-        led = RED_BLINK;                              // set red LED blink
+        if (make_coffee > 0)                          // set red/blue LED blink if coffee wish is saved
+          led = VIOLET_BLINK;
+        else                                          // set red LED blink if no coffee wish is saved
+          led = RED_BLINK;
       }
     }
     else                                              // water too low:
