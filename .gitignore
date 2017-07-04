@@ -1,0 +1,7 @@
+*~
+.idea
+firmware/*.o
+firmware/*.elf
+firmware/*.hex
+hardware/*.b#*
+hardware/*.s#*
