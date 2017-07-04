@@ -8,7 +8,6 @@
 # 				Internal RC-oscillator 8 MHz, CKDIV8 Enabled
 
 
-
 # Project specific settings
 TARGET = SenseoControl-2.0
 MCU = attiny26
