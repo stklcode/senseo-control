@@ -24,7 +24,7 @@ MCU = attiny26
 SRC = main.c
 
 # Some C flags
-CFLAGS = -Wall -Wextra -O3
+CFLAGS = -Wall -Wextra -Os
 
 help:
 	@echo
