@@ -1,79 +1,94 @@
-/**	SenseoControl 2.0
+/*****************************************************************************
+ *  SenseoControl 2.0                                                        *
+ *  Copyright (C) 2013-2018  Stefan Kalscheuer                               *
+ *                                                                           *
+ *  This program is free software: you can redistribute it and/or modify     *
+ *  it under the terms of the GNU General Public License as published by     *
+ *  the Free Software Foundation version 3.                                  *
+ *                                                                           *
+ *  This program is distributed in the hope that it will be useful,          *
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of           *
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            *
+ *  GNU General Public License for more details.                             *
+ *                                                                           *
+ *   You should have received a copy of the GNU General Public License       *
+ *   along with this program.  If not, see <https://www.gnu.org/licenses/>.  *
+ *****************************************************************************/
+
+/**
+ * SenseoControl 2.0
  *
- *  File:     main.h
- *  Author:   Stefan Kalscheuer
- *  Date:     22.04.2013
- *
- *  License:  GNU GPL v3 (see License.txt)
+ * @file   main.h
+ * @author Stefan Kalscheuer
+ * @date   2013-04-22
  */
 
-/*******************
- * USER SETTINGS
+/********************
+ * User settings:
  */
-#define TIME_1_ESPRESSO       15    // pump times in seconds
+#define TIME_1_ESPRESSO       15    // Pump times in seconds.
 #define TIME_2_ESPRESSO       28
 #define TIME_1_COFFEE         26
 #define TIME_2_COFFEE         52
-#define OPERATING_TEMPERATURE 125   // ADC threshold for water temperature
-#define COFFEE_WISH           0     // save coffee wish while heating up
+#define OPERATING_TEMPERATURE 125   // ADC threshold for water temperature.
+#define COFFEE_WISH           0     // Save coffee wish while heating up.
 /*
- *******************
- */
+ ********************/
 
-//	functions for setting and clearing bits
-#define	set_bit(var, bit)	((var) |= (1 << (bit)))
-#define	clear_bit(var, bit)	((var) &= (unsigned)~(1 << (bit)))
+// Function macros for setting and clearing bits.
+#define set_bit(var, bit)   ((var) |= (1 << (bit)))
+#define clear_bit(var, bit) ((var) &= (unsigned)~(1 << (bit)))
 
-#define ZERO_CROSSING_w     PORTA   // zero crossing detection
+#define ZERO_CROSSING_w     PORTA   // Zero crossing detection.
 #define ZERO_CROSSING_r     PINA
 #define ZERO_CROSSING_pin   0
 #define ZERO_CROSSING_ddr   DDRA
 #define ZERO_CROSSING_adc   0
 
-#define BUTTON_1_CUP_w      PORTB   // left button
+#define BUTTON_1_CUP_w      PORTB   // Left button.
 #define BUTTON_1_CUP_r      PINB
 #define BUTTON_1_CUP_pin    4
 #define BUTTON_1_CUP_ddr    DDRB
 
-#define BUTTON_2_CUP_w      PORTB   // right button
+#define BUTTON_2_CUP_w      PORTB   // Right button.
 #define BUTTON_2_CUP_r      PINB
 #define BUTTON_2_CUP_pin    5
 #define BUTTON_2_CUP_ddr    DDRB
 
-#define BUTTON_POWER_w      PORTB   // power button
+#define BUTTON_POWER_w      PORTB   // Power button.
 #define BUTTON_POWER_r      PINB
 #define BUTTON_POWER_pin    6
 #define BUTTON_POWER_ddr    DDRB
 
-#define LED_RED_w           PORTA   // red LED
+#define LED_RED_w           PORTA   // Red LED.
 #define LED_RED_r           PINA
 #define LED_RED_pin         3
 #define LED_RED_ddr         DDRA
 #define LED_RED_ON          0
 #define LED_RED_BLINK       1
 
-#define LED_GREEN_w         PORTA   // green LED
-#define LED_GREEN_r	        PINA
+#define LED_GREEN_w         PORTA   // Green LED.
+#define LED_GREEN_r         PINA
 #define LED_GREEN_pin       1
 #define LED_GREEN_ddr       DDRA
 #define LED_GREEN_ON        2
 #define LED_GREEN_BLINK     3
 
-#define LED_BLUE_w          PORTA   // blue LED
+#define LED_BLUE_w          PORTA   // Blue LED.
 #define LED_BLUE_r          PINA
 #define LED_BLUE_pin        2
 #define LED_BLUE_ddr        DDRA
 #define LED_BLUE_ON         4
 #define LED_BLUE_BLINK      5
 
-#define SENSOR_MAGNET_w     PORTA   // hall switch (water)
+#define SENSOR_MAGNET_w     PORTA   // Hall switch (water).
 #define SENSOR_MAGNET_r     PINA
 #define SENSOR_MAGNET_pin   5
 #define SENSOR_MAGNET_ddr   DDRA
 #define SENSOR_MAGNET_adc   4
 
-#define WATER_LOW           30      // ADC threshold for low water
-#define	WATER_OK            100     // ADC threshold for water OK
+#define WATER_LOW           30      // ADC threshold for low water.
+#define WATER_OK            100     // ADC threshold for water OK.
 
 #define SENSOR_TEMP_w       PORTA   // NTC (temperature)
 #define SENSOR_TEMP_r       PINA
@@ -81,20 +96,20 @@
 #define SENSOR_TEMP_ddr     DDRA
 #define SENSOR_TEMP_adc     3
 
-#define TRIAC_BOILER_w      PORTA   // boiler triac
+#define TRIAC_BOILER_w      PORTA   // Boiler triac.
 #define TRIAC_BOILER_r      PINA
 #define TRIAC_BOILER_pin    6
 #define TRIAC_BOILER_ddr    DDRA
 
-#define TRIAC_PUMP_w        PORTA   // pump triac
+#define TRIAC_PUMP_w        PORTA   // Pump triac.
 #define TRIAC_PUMP_r        PINA
 #define TRIAC_PUMP_pin      7
 #define TRIAC_PUMP_ddr      DDRA
 
-#define	AUTO_OFF_THRESHOLD  180     // AutoOff threshold (seconds)
-#define	BUTTON_CLEAN_THR    30      // button threshold for cleaning mode (ms)
-#define BUTTON_THRESHOLD    100     // button threshold (ms)
-#define BUTTON_LONG_THR     1500    // button threshold for long time push (ms)
+#define AUTO_OFF_THRESHOLD  180     // AutoOff threshold (seconds).
+#define BUTTON_CLEAN_THR    30      // Button threshold for cleaning mode (ms).
+#define BUTTON_THRESHOLD    100     // Button threshold (ms).
+#define BUTTON_LONG_THR     1500    // Button threshold for long time push (ms).
 
 #define RED                 0b00000001
 #define RED_BLINK           0b00000010
@@ -107,9 +122,9 @@
 #define VIOLET              0b00010001
 #define VIOLET_BLINK        0b00100010
 
-                                      // prototypes:
-void init ();                         //  initialization
-void power_off ();                    //  power off to sleep mode
-bool get_water ();                    //  update water state
-bool get_temperature ();              //  update tehmerature state
-unsigned int detect_zero_crossing (); //  detect zero crossing
+// Prototypes:
+void init();                         //  Initialization.
+void power_off();                    //  Power off to sleep mode.
+bool get_water();                    //  Update water state.
+bool get_temperature();              //  Update tehmerature state.
+unsigned int detect_zero_crossing(); //  Detect zero crossing.
