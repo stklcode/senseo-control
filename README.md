@@ -78,6 +78,14 @@ To to so, set the corresponding fields in the _main.h_ file:
 Pinout, button-thresholds and LED-configuration is also present in this file (should be self-explaining).
 
 
+## Build Instructions
+* Required tools: _avr-gcc_, _avr-objcopy_, _avrdude_ (for flashing only), _make_
+* All sources are bundled in the `firmware` directory
+* Check `Makefile.config` for the correct settings, especially tool and port for automated flashing.
+* On first build you might want to set the correct fuse bits, so run `make fuses`
+* Run `make compile info program` for compilation, details about binary, and flashing
+* Check `make help` for all available commands
+
 ## Notes
 
 The Triacs need heatsink.
