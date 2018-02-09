@@ -33,7 +33,6 @@
 #include <util/delay.h>
 #include <avr/interrupt.h>
 #include <avr/io.h>
-#include <stdbool.h>
 #include "main.h"
 
 // variables:
@@ -41,7 +40,7 @@ volatile unsigned int time_counter, user_time_counter = 0, sec_counter = 0; // G
 volatile unsigned int button_1_cup_counter = 0, button_2_cup_counter = 0;   // Button counter.
 volatile unsigned char button_power_counter = 0;
 volatile unsigned char led = 0;                                             // LED status flags.
-volatile bool water = false, temperature = false, make_clean = false;       // Water-, temperature-, clean-flags.
+volatile unsigned char state;                                               // Water-, temperature-, clean-flags.
 volatile unsigned char make_coffee = 0, pump_time = 0;                      // Pump time, clean mode flag.
 
 /**
@@ -57,32 +56,31 @@ int main(void) {
         if (sec_counter >= AUTO_OFF_THRESHOLD)
             button_power_counter = BUTTON_THRESHOLD;        // Check for AutoOff Timer (generate OnOff-button push).
 
-        water = get_water();                                // update water state
-        temperature = get_temperature();                    // update temperature
+        update_water();                                     // Update water state.
+        update_temperature();                               // Update temperature.
 
-        if (button_power_counter >= BUTTON_THRESHOLD) {     // button "OnOff" pushed:
+        if (button_power_counter >= BUTTON_THRESHOLD) {     // Button "OnOff" pushed:
             set_bit(TRIAC_BOILER_w, TRIAC_BOILER_pin);      // Boiler off
-            make_coffee = 0;                                // clear coffee flag
+            make_coffee = 0;                                // Clear coffee flag.
 
-            while (button_power_counter >
-                   0);                                      // wait until button is releasd (debounce)
+            while (button_power_counter > 0);               // Wait until button is releasd (debounce)
 
-            power_off();                                    // call power off sequence
+            power_off();                                    // Call power off sequence
 
-            button_power_counter = BUTTON_THRESHOLD;        // debounce again after wake up
+            button_power_counter = BUTTON_THRESHOLD;        // Debounce again after wake up
             while (button_power_counter > 0);
         }
 
         if (button_1_cup_counter >= BUTTON_CLEAN_THR && button_2_cup_counter >= BUTTON_CLEAN_THR) {
             // Both coffee buttons pushed: enter clean mode.
-            make_clean = true;  // Set clean flag.
-            led = BLUE;         // Set blue LED.
+            set_bit(state, S_CLEAN);    // Set clean flag.
+            led = BLUE;                 // Set blue LED.
             while (button_1_cup_counter > 0 && button_2_cup_counter > 0);   // Debounce buttons.
         } else if (button_1_cup_counter >= BUTTON_THRESHOLD && button_2_cup_counter < BUTTON_THRESHOLD) {
             // Left coffee button pushed: call espresso.
             sec_counter = 0;    // Reset AutoOff counter.
 
-            if (water && temperature) {                             // Machine ready:
+            if ((state & S_WATER) && (state & S_TEMP)) {            // Machine ready:
                 while (button_1_cup_counter > 0) {                  // Check if button is pushed long time.
                     if (button_1_cup_counter > BUTTON_LONG_THR) {   // Button pushed for a long time:
                         make_coffee = 1;                            // Set coffee flag to 1 (1 espresso).
@@ -99,7 +97,7 @@ int main(void) {
             // Right coffee button pushed: call coffee.
             sec_counter = 0;                                        // Reset AutoOff counter.
 
-            if (water && temperature) { // machine ready:
+            if ((state & S_WATER) && (state & S_TEMP)) {            // Machine ready:
                 while (button_2_cup_counter > 0) {                  // Check if button is pushed long time.
                     if (button_2_cup_counter > BUTTON_LONG_THR) {   // Button pushed for a long time:
                         make_coffee = 2;                            // Set coffee flag to 2 (2 espresso).
@@ -114,24 +112,24 @@ int main(void) {
             }
         }
 
-        if (water) {                                                // Water OK:
-            if (make_clean) {                                       // If clean-flag is set:
+        if ((state & S_WATER)) {                                    // Water OK:
+            if ((state & S_CLEAN)) {                                // If clean-flag is set:
                 set_bit(TRIAC_BOILER_w, TRIAC_BOILER_pin);          // Boiler off.
-                bool escape = false;                                // Init escape-flag.
-                while (water && !escape) {                          // Pump until water is empty or escape flag is set.
-                    unsigned int sense = detect_zero_crossing();    // Detect zero crossing.
-                    if (sense <= 100) {
+                clear_bit(state, S_ESC);                            // Init escape-flag.
+                while ((state & S_WATER) && (state & S_ESC)) {      // Pump until water is empty or escape flag is set.
+                    if (detect_zero_crossing() <= 100) {            // Detect zero crossing.
                         clear_bit(TRIAC_PUMP_w, TRIAC_PUMP_pin);    // Generate trigger impulse for pump triac.
                         _delay_ms(3);
                         set_bit(TRIAC_PUMP_w, TRIAC_PUMP_pin);
                     }
-                    water = get_water();                            // Update water state.
+                    update_water();                                 // Update water state.
 
-                    if (button_power_counter > BUTTON_THRESHOLD)
-                        escape = true;                              // Check power button counter and set escape flag.
+                    if (button_power_counter > BUTTON_THRESHOLD) {
+                        set_bit(state, S_ESC);                      // Check power button counter and set escape flag.
+                    }
                 }
-                make_clean = false;                                 // Clear clean flag.
-            } else if (temperature) {                               // Temperature OK:
+                clear_bit(state, S_CLEAN);                          // Clear clean flag.
+            } else if ((state & S_TEMP)) {                          // Temperature OK:
                 set_bit(TRIAC_BOILER_w, TRIAC_BOILER_pin);          // Boiler off.
 
                 led = GREEN;                                        // Set green LED.
@@ -156,24 +154,23 @@ int main(void) {
                     }
 
                     user_time_counter = 0;      // Reset user time counter.
-                    bool escape = false;        // Init escape flag.
+                    clear_bit(state, S_ESC);    // Init escape flag.
 
                     // loop until pump time is reached or water is empty
-                    while (user_time_counter < (pump_time * 1000) && water && !escape) {
+                    while (user_time_counter < (pump_time * 1000) && (state & S_WATER) && !(state & S_ESC)) {
                         // Check for preinfusion break.
                         if (make_coffee > 2 || (user_time_counter < 2000 || user_time_counter > 4000)) {
-                            unsigned int sense = detect_zero_crossing();    // Detect zero crossing.
-                            if (sense <= 100) {
+                            if (detect_zero_crossing() <= 100) {            // Detect zero crossing.
                                 clear_bit(TRIAC_PUMP_w, TRIAC_PUMP_pin);    // Generate trigger impulse for pump triac.
                                 _delay_ms(3);
                                 set_bit(TRIAC_PUMP_w, TRIAC_PUMP_pin);
                             }
                         }
 
-                        water = get_water();    // Update water state.
+                        update_water();             // Update water state.
 
                         if (button_power_counter > BUTTON_THRESHOLD) {
-                            escape = true;      // Check for power button counter and set escape flag.
+                            set_bit(state, S_ESC);  // Check for power button counter and set escape flag.
                         }
                     }
 
@@ -273,32 +270,32 @@ void power_off() {
 
 /**
  * Checks hall sensor for water level.
- *
- * @return @c true if water level is OK, @c false otherwise.
  */
-bool get_water() {
+void update_water(void) {
     ADMUX = SENSOR_MAGNET_adc | (1 << ADLAR);
     set_bit(ADCSR, ADSC);
     loop_until_bit_is_clear(ADCSR, ADSC);
     unsigned char sense = ADCH;
-    if ((water && sense > WATER_LOW) || (!water && sense >= WATER_OK))
-        return true;
-    return false;
+    if (((state & S_WATER) && sense > WATER_LOW) || (!(state & S_WATER) && sense >= WATER_OK)) {
+        set_bit(state, S_WATER);
+    } else {
+        clear_bit(state, S_WATER);
+    }
 }
 
 /**
  * Checks NTC sensor for temperature state.
- *
- * @return @c true if temperature is OK, @c false if it is too low
  */
-bool get_temperature() {
+void update_temperature(void) {
     ADMUX = SENSOR_TEMP_adc | (1 << ADLAR);
     set_bit(ADCSR, ADSC);
     loop_until_bit_is_clear(ADCSR, ADSC);
     unsigned char sense = ADCH;
-    if (sense >= OPERATING_TEMPERATURE)
-        return true;
-    return false;
+    if (sense >= OPERATING_TEMPERATURE) {
+        set_bit(state, S_TEMP);
+    } else {
+        clear_bit(state, S_TEMP);
+    }
 }
 
 /**
@@ -334,48 +331,56 @@ ISR ( TIMER1_OVF1_vect) {
     }
     user_time_counter++;        // Universal counter (for pump time).
 
-    bool leds_blink_on;         // Status flag for blinking LEDs with 1Hz.
-    if (time_counter < 499)
-        leds_blink_on = true;
-    else
-        leds_blink_on = false;
+    unsigned char leds_blink_on;         // Status flag for blinking LEDs with 1Hz.
+    if (time_counter < 499) {
+        leds_blink_on = 1;
+    } else {
+        leds_blink_on = 0;
+    }
 
-    if (led & (1 << LED_RED_ON) || (led & (1 << LED_RED_BLINK) && leds_blink_on))
+    if (led & (1 << LED_RED_ON) || (led & (1 << LED_RED_BLINK) && leds_blink_on)) {
         set_bit(LED_RED_w, LED_RED_pin);
-    else
+    } else {
         clear_bit(LED_RED_w, LED_RED_pin);
-    if (led & (1 << LED_GREEN_ON)
-        || (led & (1 << LED_GREEN_BLINK) && leds_blink_on))
+    }
+    if (led & (1 << LED_GREEN_ON) || (led & (1 << LED_GREEN_BLINK) && leds_blink_on)) {
         set_bit(LED_GREEN_w, LED_GREEN_pin);
-    else
+    } else {
         clear_bit(LED_GREEN_w, LED_GREEN_pin);
-    if (led & (1 << LED_BLUE_ON)
-        || (led & (1 << LED_BLUE_BLINK) && leds_blink_on))
+    }
+    if (led & (1 << LED_BLUE_ON) || (led & (1 << LED_BLUE_BLINK) && leds_blink_on)) {
         set_bit(LED_BLUE_w, LED_BLUE_pin);
-    else
+    } else {
         clear_bit(LED_BLUE_w, LED_BLUE_pin);
+    }
 
     if (bit_is_clear(BUTTON_1_CUP_r, BUTTON_1_CUP_pin)) {   // Left button counter.
-        if (button_1_cup_counter < 65535)
+        if (button_1_cup_counter < 65535) {
             button_1_cup_counter++;
+        }
     } else {
-        if (button_1_cup_counter > 0)
+        if (button_1_cup_counter > 0) {
             button_1_cup_counter--;
+        }
     }
 
     if (bit_is_clear(BUTTON_2_CUP_r, BUTTON_2_CUP_pin)) {   // Right button counter.
-        if (button_2_cup_counter < 65535)
+        if (button_2_cup_counter < 65535) {
             button_2_cup_counter++;
+        }
     } else {
-        if (button_2_cup_counter > 0)
+        if (button_2_cup_counter > 0) {
             button_2_cup_counter--;
+        }
     }
 
     if (bit_is_clear(BUTTON_POWER_r, BUTTON_POWER_pin)) {   // Power button counter.
-        if (button_power_counter < 255)
+        if (button_power_counter < 255) {
             button_power_counter++;
+        }
     } else {
-        if (button_power_counter > 0)
+        if (button_power_counter > 0) {
             button_power_counter--;
+        }
     }
 }

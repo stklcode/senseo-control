@@ -111,6 +111,13 @@
 #define BUTTON_THRESHOLD    100     // Button threshold (ms).
 #define BUTTON_LONG_THR     1500    // Button threshold for long time push (ms).
 
+// Global state flags.
+#define S_WATER             0
+#define S_TEMP              1
+#define S_CLEAN             2
+#define S_ESC               3
+
+// LED color flags.
 #define RED                 0b00000001
 #define RED_BLINK           0b00000010
 #define GREEN               0b00000100
@@ -123,8 +130,8 @@
 #define VIOLET_BLINK        0b00100010
 
 // Prototypes:
-void init();                         //  Initialization.
-void power_off();                    //  Power off to sleep mode.
-bool get_water();                    //  Update water state.
-bool get_temperature();              //  Update tehmerature state.
-unsigned int detect_zero_crossing(); //  Detect zero crossing.
+void init();                                //  Initialization.
+void power_off();                           //  Power off to sleep mode.
+void update_water(void);                    //  Update water state.
+void update_temperature(void);              //  Update temperature state.
+unsigned int detect_zero_crossing(void);    //  Detect zero crossing.
