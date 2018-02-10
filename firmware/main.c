@@ -141,16 +141,21 @@ int main(void) {
                         led = GREEN_BLINK;                          // Set green LED blink for coffee.
                     }
 
-                    if (make_coffee == 1) {
-                        pump_time = TIME_1_ESPRESSO;                // 1 cup of espresso (2s preinfusion included).
-                    } else if (make_coffee == 2) {
-                        pump_time = TIME_2_ESPRESSO;                // 2 cups of espresso (2s preinfusion included).
-                    } else if (make_coffee == 3) {
-                        pump_time = TIME_1_COFFEE;                  // 1 cup of coffee.
-                    } else if (make_coffee == 4) {
-                        pump_time = TIME_2_COFFEE;                  // 2 cups of coffee.
-                    } else {
-                        make_coffee = 0;
+                    switch (make_coffee) {
+                        case 1:
+                            pump_time = TIME_1_ESPRESSO;            // 1 cup of espresso (2s preinfusion included).
+                            break;
+                        case 2:
+                            pump_time = TIME_2_ESPRESSO;            // 2 cups of espresso (2s preinfusion included).
+                            break;
+                        case 3:
+                            pump_time = TIME_1_COFFEE;              // 1 cup of coffee.
+                            break;
+                        case 4:
+                            pump_time = TIME_2_COFFEE;              // 2 cups of coffee.
+                            break;
+                        default:
+                            make_coffee = 0;
                     }
 
                     user_time_counter = 0;      // Reset user time counter.
@@ -244,7 +249,7 @@ void init() {
 /**
  * Clear bits and set controller to sleep mode.
  */
-void power_off() {
+void power_off(void) {
     cli();                                  // Disable interrupts.
     set_bit(GIMSK, INT0);                   // Activate interrupt 0 (for wake-up).
     clear_bit(TIMSK, TOIE1);                // Deactivate timer 1.

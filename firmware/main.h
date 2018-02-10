@@ -130,8 +130,8 @@
 #define VIOLET_BLINK        0b00100010
 
 // Prototypes:
-void init();                                //  Initialization.
-void power_off();                           //  Power off to sleep mode.
+void init(void);                            //  Initialization.
+void power_off(void);                       //  Power off to sleep mode.
 void update_water(void);                    //  Update water state.
 void update_temperature(void);              //  Update temperature state.
 unsigned int detect_zero_crossing(void);    //  Detect zero crossing.
