@@ -1,3 +1,5 @@
+View this project on [CADLAB.io](https://cadlab.io/node/863). 
+
 # Senseo Control 2.0 
 
 A completely rebuilt AVR based hard- and software for Senseo® HD782x coffee machine.
