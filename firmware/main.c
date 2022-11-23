@@ -76,129 +76,29 @@ int main(void) {
             while (button_power_counter > 0);
         }
 
-        if (button_1_cup_counter >= BUTTON_CLEAN_THR && button_2_cup_counter >= BUTTON_CLEAN_THR) {
-            // Both coffee buttons pushed: enter clean mode.
-            set_bit(state, S_CLEAN);    // Set clean flag.
-            led = BLUE;                 // Set blue LED.
-            while (button_1_cup_counter > 0 && button_2_cup_counter > 0);   // Debounce buttons.
-        } else if (button_1_cup_counter >= BUTTON_THRESHOLD && button_2_cup_counter < BUTTON_THRESHOLD) {
-            // Left coffee button pushed: call espresso.
-            sec_counter = 0;    // Reset AutoOff counter.
+        process_buttons();
 
-            if ((state & S_WATER) && (state & S_TEMP)) {            // Machine ready:
-                while (button_1_cup_counter > 0) {                  // Check if button is pushed long time.
-                    if (button_1_cup_counter > BUTTON_LONG_THR) {   // Button pushed for a long time:
-                        make_coffee = ONE_ESPRESSO;                   // Set coffee flag to 1 (1 espresso).
-                        button_1_cup_counter = 0;                   // Clear button counter.
-                    }
+        if (state & S_WATER) {                                  // Water OK:
+            if (state & S_CLEAN) {                              // If clean-flag is set:
+                do_clean();
+            } else if (state & S_TEMP) {                        // Temperature OK:
+                set_bit(TRIAC_BOILER_w, TRIAC_BOILER_pin);      // Boiler off.
+                led = GREEN;                                    // Set green LED.
+                if (make_coffee > NO_COFFEE) {                  // If coffee flag is set:
+                    do_coffee();
                 }
-                if (make_coffee != ONE_ESPRESSO) {
-                    make_coffee = ONE_COFFEE;                       // Set coffee flag to 3 (1 coffee) otherwise.
-                }
-            } else if (COFFEE_WISH) {                               // Save coffee wish.
-                make_coffee = ONE_COFFEE;
-            }
-        } else if (button_1_cup_counter < BUTTON_THRESHOLD && button_2_cup_counter >= BUTTON_THRESHOLD) {
-            // Right coffee button pushed: call coffee.
-            sec_counter = 0;                                        // Reset AutoOff counter.
-
-            if ((state & S_WATER) && (state & S_TEMP)) {            // Machine ready:
-                while (button_2_cup_counter > 0) {                  // Check if button is pushed long time.
-                    if (button_2_cup_counter > BUTTON_LONG_THR) {   // Button pushed for a long time:
-                        make_coffee = TWO_ESPRESSO;                 // Set coffee flag to 2 (2 espresso).
-                        button_2_cup_counter = 0;                   // Clear button counter.
-                    }
-                }
-                if (make_coffee != TWO_ESPRESSO) {
-                    make_coffee = TWO_COFFEE;                       // Set coffee flag to 4 (2 coffee) otherwise.
-                }
-            } else if (COFFEE_WISH) {                               // Save coffee wish
-                make_coffee = TWO_COFFEE;
-            }
-        }
-
-        if (state & S_WATER) {                                      // Water OK:
-            if (state & S_CLEAN) {                                  // If clean-flag is set:
-                set_bit(TRIAC_BOILER_w, TRIAC_BOILER_pin);          // Boiler off.
-                clear_bit(state, S_ESC);                            // Init escape-flag.
-                while ((state & S_WATER) && (state & S_ESC)) {      // Pump until water is empty or escape flag is set.
-                    if (detect_zero_crossing() <= 100) {            // Detect zero crossing.
-                        clear_bit(TRIAC_PUMP_w, TRIAC_PUMP_pin);    // Generate trigger impulse for pump triac.
-                        _delay_ms(3);
-                        set_bit(TRIAC_PUMP_w, TRIAC_PUMP_pin);
-                    }
-                    update_water();                                 // Update water state.
-
-                    if (button_power_counter > BUTTON_THRESHOLD) {
-                        set_bit(state, S_ESC);                      // Check power button counter and set escape flag.
-                    }
-                }
-                clear_bit(state, S_CLEAN);                          // Clear clean flag.
-            } else if (state & S_TEMP) {                            // Temperature OK:
-                set_bit(TRIAC_BOILER_w, TRIAC_BOILER_pin);          // Boiler off.
-
-                led = GREEN;                                        // Set green LED.
-
-                if (make_coffee > NO_COFFEE) {                      // If coffee flag is set:
-                    if (IS_ESPRESSO(make_coffee)) {
-                        led = ORANGE_BLINK;                         // Set orange LED blink for espresso.
-                    } else {
-                        led = GREEN_BLINK;                          // Set green LED blink for coffee.
-                    }
-
-                    switch (make_coffee) {
-                        case ONE_ESPRESSO:
-                            pump_time = TIME_1_ESPRESSO;            // 1 cup of espresso (2s preinfusion included).
-                            break;
-                        case 2:
-                            pump_time = TIME_2_ESPRESSO;            // 2 cups of espresso (2s preinfusion included).
-                            break;
-                        case ONE_COFFEE:
-                            pump_time = TIME_1_COFFEE;              // 1 cup of coffee.
-                            break;
-                        case TWO_COFFEE:
-                            pump_time = TIME_2_COFFEE;              // 2 cups of coffee.
-                            break;
-                        default:
-                            make_coffee = NO_COFFEE;
-                    }
-
-                    user_time_counter = 0;      // Reset user time counter.
-                    clear_bit(state, S_ESC);    // Init escape flag.
-
-                    // loop until pump time is reached or water is empty
-                    while (user_time_counter < (pump_time * 1000) && (state & S_WATER) && !(state & S_ESC)) {
-                        // Check for preinfusion break.
-                        if ((IS_COFFEE(make_coffee) || (user_time_counter < 2000 || user_time_counter > 4000)) &&
-                            detect_zero_crossing() <= 100) {            // Detect zero crossing.
-                            clear_bit(TRIAC_PUMP_w, TRIAC_PUMP_pin);    // Generate trigger impulse for pump triac.
-                            _delay_ms(3);
-                            set_bit(TRIAC_PUMP_w, TRIAC_PUMP_pin);
-                        }
-
-                        update_water();             // Update water state.
-
-                        if (button_power_counter > BUTTON_THRESHOLD) {
-                            set_bit(state, S_ESC);  // Check for power button counter and set escape flag.
-                        }
-                    }
-
-                    set_bit(TRIAC_PUMP_w, TRIAC_PUMP_pin);      // Pump off
-                    make_coffee = NO_COFFEE;                    // Clear coffee flag.
-                    sec_counter = 0;                            // Reset AutoOff timer.
-                }
-            } else {    // Temperature too low.
+            } else {                                            // Temperature too low.
                 clear_bit(TRIAC_BOILER_w, TRIAC_BOILER_pin);    // Boiler on.
-                if (make_coffee > NO_COFFEE) {                  // Set red/blue LED blink if coffee wish is saved.
+                if (make_coffee > NO_COFFEE) {                  // Set violet LED blink if coffee wish is saved.
                     led = VIOLET_BLINK;
                 } else {                                        // Set red LED blink if no coffee wish is saved.
                     led = RED_BLINK;
                 }
             }
-        } else {    // Water too low:
-            set_bit(TRIAC_BOILER_w, TRIAC_BOILER_pin);      // Boiler off.
-            set_bit(TRIAC_PUMP_w, TRIAC_PUMP_pin);          // Pump off.
-            led = BLUE_BLINK;                               // Set blue LED blink.
+        } else {                                                // Water too low:
+            set_bit(TRIAC_BOILER_w, TRIAC_BOILER_pin);          // Boiler off.
+            set_bit(TRIAC_PUMP_w, TRIAC_PUMP_pin);              // Pump off.
+            led = BLUE_BLINK;                                   // Set blue LED blink.
         }
     }
 }
@@ -319,6 +219,139 @@ unsigned int detect_zero_crossing() {
     unsigned char sense_L = ADCL;
     unsigned char sense_H = ADCH;
     return (sense_H << 8) | sense_L;
+}
+
+/**
+ * Process button inputs and update states accordingly.
+ */
+static void process_buttons(void) {
+    if (button_1_cup_counter >= BUTTON_CLEAN_THR && button_2_cup_counter >= BUTTON_CLEAN_THR) {
+        // Both coffee buttons pushed: enter clean mode.
+        set_bit(state, S_CLEAN);    // Set clean flag.
+        led = BLUE;                 // Set blue LED.
+        while (button_1_cup_counter > 0 && button_2_cup_counter > 0);   // Debounce buttons.
+    } else if (button_1_cup_counter >= BUTTON_THRESHOLD && button_2_cup_counter < BUTTON_THRESHOLD) {
+        // Left coffee button pushed: call espresso.
+        sec_counter = 0;    // Reset AutoOff counter.
+
+        if ((state & S_WATER) && (state & S_TEMP)) {            // Machine ready:
+            while (button_1_cup_counter > 0) {                  // Check if button is pushed long time.
+                if (button_1_cup_counter > BUTTON_LONG_THR) {   // Button pushed for a long time:
+                    make_coffee = ONE_ESPRESSO;                   // Set coffee flag to 1 (1 espresso).
+                    button_1_cup_counter = 0;                   // Clear button counter.
+                }
+            }
+            if (make_coffee != ONE_ESPRESSO) {
+                make_coffee = ONE_COFFEE;                       // Set coffee flag to 3 (1 coffee) otherwise.
+            }
+        } else if (COFFEE_WISH) {                               // Save coffee wish.
+            make_coffee = ONE_COFFEE;
+        }
+    } else if (button_1_cup_counter < BUTTON_THRESHOLD && button_2_cup_counter >= BUTTON_THRESHOLD) {
+        // Right coffee button pushed: call coffee.
+        sec_counter = 0;                                        // Reset AutoOff counter.
+
+        if ((state & S_WATER) && (state & S_TEMP)) {            // Machine ready:
+            while (button_2_cup_counter > 0) {                  // Check if button is pushed long time.
+                if (button_2_cup_counter > BUTTON_LONG_THR) {   // Button pushed for a long time:
+                    make_coffee = TWO_ESPRESSO;                 // Set coffee flag to 2 (2 espresso).
+                    button_2_cup_counter = 0;                   // Clear button counter.
+                }
+            }
+            if (make_coffee != TWO_ESPRESSO) {
+                make_coffee = TWO_COFFEE;                       // Set coffee flag to 4 (2 coffee) otherwise.
+            }
+        } else if (COFFEE_WISH) {                               // Save coffee wish
+            make_coffee = TWO_COFFEE;
+        }
+    }
+}
+
+/**
+ * Execute cleaning routine.
+ * Pump water without additional heating, until the water tank is empty or the power button is pushed.
+ */
+static void do_clean(void) {
+    set_bit(TRIAC_BOILER_w, TRIAC_BOILER_pin);          // Boiler off.
+    clear_bit(state, S_ESC);                            // Init escape-flag.
+
+    // Pump until water is empty or escape flag is set.
+    while ((state & S_WATER) && (state & S_ESC)) {
+        // Detect zero crossing and trigger impulse for the pump triac.
+        if (detect_zero_crossing() <= 100) {
+            clear_bit(TRIAC_PUMP_w, TRIAC_PUMP_pin);
+            _delay_ms(3);
+            set_bit(TRIAC_PUMP_w, TRIAC_PUMP_pin);
+        }
+
+        // Update water state.
+        update_water();
+
+        // Check power button counter and set escape flag.
+        if (button_power_counter > BUTTON_THRESHOLD) {
+            set_bit(state, S_ESC);
+        }
+    }
+
+    // Clear clean flag.
+    clear_bit(state, S_CLEAN);
+}
+
+/**
+ * Execute the actual coffee making routine.
+ */
+static void do_coffee(void) {
+    // Set orange LED blink for espresso and green blink for coffee.
+    if (IS_ESPRESSO(make_coffee)) {
+        led = ORANGE_BLINK;
+    } else {
+        led = GREEN_BLINK;
+    }
+
+    // Determine the correct pump time for espresso (including 2s preinfusion break) and coffee.
+    switch (make_coffee) {
+        case ONE_ESPRESSO:
+            pump_time = TIME_1_ESPRESSO;
+            break;
+        case 2:
+            pump_time = TIME_2_ESPRESSO;
+            break;
+        case ONE_COFFEE:
+            pump_time = TIME_1_COFFEE;
+            break;
+        case TWO_COFFEE:
+            pump_time = TIME_2_COFFEE;
+            break;
+        default:
+            make_coffee = NO_COFFEE;
+    }
+
+    user_time_counter = 0;      // Reset user time counter.
+    clear_bit(state, S_ESC);    // Init escape flag.
+
+    // loop until pump time is reached or water is empty
+    while (user_time_counter < (pump_time * 1000) && (state & S_WATER) && !(state & S_ESC)) {
+        // Check for preinfusion break.
+        if ((IS_COFFEE(make_coffee) || (user_time_counter < 2000 || user_time_counter > 4000)) &&
+            detect_zero_crossing() <= 100) {            // Detect zero crossing.
+            // Generate trigger impulse for pump triac.
+            clear_bit(TRIAC_PUMP_w, TRIAC_PUMP_pin);
+            _delay_ms(3);
+            set_bit(TRIAC_PUMP_w, TRIAC_PUMP_pin);
+        }
+
+        // Update water state.
+        update_water();
+
+        // Check for power button counter and set escape flag.
+        if (button_power_counter > BUTTON_THRESHOLD) {
+            set_bit(state, S_ESC);
+        }
+    }
+
+    set_bit(TRIAC_PUMP_w, TRIAC_PUMP_pin);  // Pump off
+    make_coffee = NO_COFFEE;                // Clear coffee flag.
+    sec_counter = 0;                        // Reset AutoOff timer.
 }
 
 /**

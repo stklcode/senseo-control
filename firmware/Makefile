@@ -56,4 +56,4 @@ fuses:
 	@$(AVRDUDE) -p $(MCU) -q -q -u -V -c $(PGMDEV) $(PGMOPT) -U lfuse:w:0xE1:m -U hfuse:w:0x12:m
 
 clean:
-	@$(REMOVE) $(TARGET).elf
+	@$(REMOVE) $(TARGET).elf $(TARGET).hex

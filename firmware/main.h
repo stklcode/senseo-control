@@ -144,3 +144,6 @@ void power_off(void);                       //  Power off to sleep mode.
 void update_water(void);                    //  Update water state.
 void update_temperature(void);              //  Update temperature state.
 unsigned int detect_zero_crossing(void);    //  Detect zero crossing.
+static void process_buttons(void);
+static void do_coffee(void);
+static void do_clean(void);
