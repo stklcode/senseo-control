@@ -117,6 +117,15 @@
 #define S_CLEAN             2
 #define S_ESC               3
 
+// Coffee mode flags.
+#define NO_COFFEE     0
+#define ONE_ESPRESSO  1
+#define TWO_ESPRESSO  2
+#define ONE_COFFEE    3
+#define TWO_COFFEE    4
+#define IS_COFFEE(VAR) (VAR > 2)
+#define IS_ESPRESSO(VAR) (VAR > 0 && VAR < 3)
+
 // LED color flags.
 #define RED                 0b00000001
 #define RED_BLINK           0b00000010
