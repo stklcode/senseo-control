@@ -1,6 +1,6 @@
 /*****************************************************************************
  *  SenseoControl 2.0                                                        *
- *  Copyright (C) 2013-2018  Stefan Kalscheuer                               *
+ *  Copyright (C) 2013-2022  Stefan Kalscheuer                               *
  *                                                                           *
  *  This program is free software: you can redistribute it and/or modify     *
  *  it under the terms of the GNU General Public License as published by     *
@@ -36,12 +36,16 @@
 #include "main.h"
 
 // variables:
-volatile unsigned int time_counter, user_time_counter = 0, sec_counter = 0; // Global and universal time counter (ms) and second-counter (for AutoOff).
-volatile unsigned int button_1_cup_counter = 0, button_2_cup_counter = 0;   // Button counter.
-volatile unsigned char button_power_counter = 0;
-volatile unsigned char led = 0;                                             // LED status flags.
-volatile unsigned char state;                                               // Water-, temperature-, clean-flags.
-volatile unsigned char make_coffee = 0, pump_time = 0;                      // Pump time, clean mode flag.
+volatile unsigned int time_counter;                 // Global time counter (ms).
+volatile unsigned int user_time_counter = 0;        // Universal time counter (ms).
+volatile unsigned int sec_counter = 0;              // Second-counter (for AutoOff).
+volatile unsigned int button_1_cup_counter = 0;     // Left button counter (1 cup).
+volatile unsigned int button_2_cup_counter = 0;     // Left button counter (2 cups).
+volatile unsigned char button_power_counter = 0;    // Power button counter.
+volatile unsigned char led = 0;                     // LED status flags.
+volatile unsigned char state;                       // Water-, temperature-, clean-flags.
+volatile unsigned char make_coffee = 0;             // Coffee mode flag.
+volatile unsigned char pump_time = 0;               // Pump time.
 
 /**
  * Main program.
@@ -50,11 +54,12 @@ volatile unsigned char make_coffee = 0, pump_time = 0;                      // P
  */
 int main(void) {
     init();                                                 // Initialization.
-    power_off();                                            // Power off after init sequece.
+    power_off();                                            // Power off after init sequence.
 
     while (1) {                                             // Main loop.
-        if (sec_counter >= AUTO_OFF_THRESHOLD)
+        if (sec_counter >= AUTO_OFF_THRESHOLD) {
             button_power_counter = BUTTON_THRESHOLD;        // Check for AutoOff Timer (generate OnOff-button push).
+        }
 
         update_water();                                     // Update water state.
         update_temperature();                               // Update temperature.
@@ -63,7 +68,7 @@ int main(void) {
             set_bit(TRIAC_BOILER_w, TRIAC_BOILER_pin);      // Boiler off
             make_coffee = 0;                                // Clear coffee flag.
 
-            while (button_power_counter > 0);               // Wait until button is releasd (debounce)
+            while (button_power_counter > 0);               // Wait until button is released (debounce)
 
             power_off();                                    // Call power off sequence
 
@@ -112,8 +117,8 @@ int main(void) {
             }
         }
 
-        if ((state & S_WATER)) {                                    // Water OK:
-            if ((state & S_CLEAN)) {                                // If clean-flag is set:
+        if (state & S_WATER) {                                      // Water OK:
+            if (state & S_CLEAN) {                                  // If clean-flag is set:
                 set_bit(TRIAC_BOILER_w, TRIAC_BOILER_pin);          // Boiler off.
                 clear_bit(state, S_ESC);                            // Init escape-flag.
                 while ((state & S_WATER) && (state & S_ESC)) {      // Pump until water is empty or escape flag is set.
@@ -129,7 +134,7 @@ int main(void) {
                     }
                 }
                 clear_bit(state, S_CLEAN);                          // Clear clean flag.
-            } else if ((state & S_TEMP)) {                          // Temperature OK:
+            } else if (state & S_TEMP) {                            // Temperature OK:
                 set_bit(TRIAC_BOILER_w, TRIAC_BOILER_pin);          // Boiler off.
 
                 led = GREEN;                                        // Set green LED.
@@ -164,12 +169,11 @@ int main(void) {
                     // loop until pump time is reached or water is empty
                     while (user_time_counter < (pump_time * 1000) && (state & S_WATER) && !(state & S_ESC)) {
                         // Check for preinfusion break.
-                        if (make_coffee > 2 || (user_time_counter < 2000 || user_time_counter > 4000)) {
-                            if (detect_zero_crossing() <= 100) {            // Detect zero crossing.
-                                clear_bit(TRIAC_PUMP_w, TRIAC_PUMP_pin);    // Generate trigger impulse for pump triac.
-                                _delay_ms(3);
-                                set_bit(TRIAC_PUMP_w, TRIAC_PUMP_pin);
-                            }
+                        if ((make_coffee > 2 || (user_time_counter < 2000 || user_time_counter > 4000)) &&
+                            detect_zero_crossing() <= 100) {            // Detect zero crossing.
+                            clear_bit(TRIAC_PUMP_w, TRIAC_PUMP_pin);    // Generate trigger impulse for pump triac.
+                            _delay_ms(3);
+                            set_bit(TRIAC_PUMP_w, TRIAC_PUMP_pin);
                         }
 
                         update_water();             // Update water state.
@@ -203,7 +207,7 @@ int main(void) {
  * Initializes relevant bits, timer and ADC.
  */
 void init() {
-    clear_bit(ZERO_CROSSING_ddr, ZERO_CROSSING_pin);    // Zero crossing dection pins as input-
+    clear_bit(ZERO_CROSSING_ddr, ZERO_CROSSING_pin);    // Zero crossing detection pins as input.
     clear_bit(ZERO_CROSSING_w, ZERO_CROSSING_pin);      // No internal pull-up (for ADC).
 
     clear_bit(BUTTON_1_CUP_ddr, BUTTON_1_CUP_pin);      // Button pins as input.
