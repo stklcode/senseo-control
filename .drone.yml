@@ -1,0 +1,11 @@
+kind: pipeline
+type: docker
+name: default
+
+steps:
+  - name: build-firmware
+    image: stklcode/avr-toolchain
+    commands:
+      - avr-gcc --version
+      - cd firmware
+      - make compile info
