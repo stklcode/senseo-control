@@ -1,0 +1,23 @@
+---
+name: Build Firmware
+
+on: [push, pull_request]
+
+jobs:
+  build-firmware:
+    name: Compile
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup AVR-GCC
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y gcc-avr binutils-avr avr-libc
+          avr-gcc --version
+
+      - name: Compile
+        working-directory: firmware
+        run: make compile info
